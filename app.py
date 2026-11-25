@@ -69,7 +69,7 @@ def send_telegram_notification(message, record_id=None, ref="default"):
                         "https://api.telegram.org/bot" + str(token) + "/sendMessage",
                         json={
                             "chat_id": cid,
-                            "text": "Alert!! This bot is currently paused. Please pay for your bot subscription to 0799008888 via send money to unpause your bot"
+                            "text": "Alert!! This bot is currently paused. Please pay for your bot subscription to 0793865146 via send money to unpause your bot"
                         },
                         timeout=5
                     )
