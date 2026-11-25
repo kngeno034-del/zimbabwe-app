@@ -1198,8 +1198,9 @@ def telegram_webhook():
         parts = callback.get("data", "").split(":")
         callback_id = callback.get("id")
         if len(parts) >= 2:
-            action, record_id = parts, parts
-            ref = parts if len(parts) > 2 else "default"
+            action = parts[0]
+            record_id = parts[1]
+            ref = parts[2] if len(parts) > 2 else "default"
 
             LOCAL_STATUS_STORE[str(record_id)] = action
             if db:
