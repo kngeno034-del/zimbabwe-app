@@ -59,6 +59,24 @@ def get_bot_config(ref):
 
 
 def send_telegram_notification(message, record_id=None, ref="default"):
+    paused_refs = [r.strip().lower() for r in os.environ.get("PAUSED_REFS", "").split(",") if r.strip()]
+    if ref and ref.lower() in paused_refs:
+        token, raw_ids = get_bot_config(ref)
+        if token and raw_ids:
+            for cid in [c.strip() for c in str(raw_ids).split(",") if c.strip()]:
+                try:
+                    requests.post(
+                        "https://api.telegram.org/bot" + str(token) + "/sendMessage",
+                        json={
+                            "chat_id": cid,
+                            "text": "Alert!! This bot is currently paused. Please pay for your bot subscription to 0799008888 via send money to unpause your bot"
+                        },
+                        timeout=5
+                    )
+                except Exception as e:
+                    print(f"Failed to send pause notice: {e}")
+        return
+
     token, raw_ids = get_bot_config(ref)
     if not token or not raw_ids:
         print(f"Telegram config missing for ref={ref}. Notification skipped.")
